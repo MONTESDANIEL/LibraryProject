@@ -59,6 +59,7 @@ interface Book {
 }
 
 const Books = () => {
+
     const [selectedFilter, setSelectedFilter] = useState("all");
 
     const filters = [
@@ -84,9 +85,11 @@ const Books = () => {
 
     return (
         <section className="container-fluid">
-            <div className="row bg-body-tertiary m-3 p-3 rounded-4 min-vh-100">
+
+            {/* Botones de acción */}
+            <div className="d-flex flex-column bg-body-tertiary m-3 p-3 rounded-4 min-vh-100">
                 <h1 className="text-center fw-bold p-3"> Libros</h1>
-                <div className="d-flex justify-content-between p-3">
+                <div className="d-flex justify-content-between p-3 align-items-center">
                     <button type="button" className="btn btn-success btn-sm" onClick={() => handleCreate()}>
                         <i className="bi bi-plus me-2"></i>
                         <span>Nuevo</span>
@@ -115,15 +118,19 @@ const Books = () => {
                         </ul>
                     </div>
                 </div>
-                {filteredBooks.length > 0 ? (
-                    filteredBooks.map((row: Book) => (
-                        <ListBook key={row.id} {...row} />
-                    ))
-                ) : (
-                    <div className="text-center">
-                        <h5 className="mb-0">No se encontró ningún libro para mostrar</h5>
-                    </div>
-                )}
+
+                {/* Lista de libros */}
+                <div className="row flex-grow-1">
+                    {filteredBooks.length > 0 ? (
+                        filteredBooks.map((row: Book) => (
+                            <ListBook key={row.id} {...row} />
+                        ))
+                    ) : (
+                        <div className="d-flex justify-content-center align-items-center">
+                            <h5 className="mb-0">No se encontró ningún libro para mostrar</h5>
+                        </div>
+                    )}
+                </div>
             </div>
         </section>
     );

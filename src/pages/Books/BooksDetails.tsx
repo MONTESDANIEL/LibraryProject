@@ -44,7 +44,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ title, author, genre, availab
                     <i className="bi bi-pen-fill me-2"></i>
                     <span>Editar</span>
                 </button>
-                <button type="button" className="btn btn-primary btn-sm col-3" onClick={() => handleLoan()}>
+                <button type="button" className={`btn btn-primary btn-sm col-3 ${availability ? "" : "disabled"}`} onClick={() => handleLoan()}>
                     <i className="bi bi-book me-2"></i>
                     <span>Rentar</span>
                 </button>
