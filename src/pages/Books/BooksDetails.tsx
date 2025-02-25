@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 interface Book {
     id: number;
     title: string;
@@ -12,12 +14,15 @@ interface BookDetailsProps {
 }
 
 const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit }) => {
+    const navigate = useNavigate();
+
     const handleDelete = () => {
         console.log("Eliminar libro:", book.id);
     };
 
     const handleLoan = () => {
-        console.log("Rentar libro:", book.id);
+        console.log("Datos del libro antes de navegar:", book);
+        navigate("/loan", { state: { book } });
     };
 
     return (
@@ -47,7 +52,7 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit }) => {
                 </button>
                 <button type="button" className={`btn btn-primary btn-sm col-3 ${book.availability ? "" : "disabled"}`} onClick={handleLoan}>
                     <i className="bi bi-book me-2"></i>
-                    <span>Rentar</span>
+                    <span>Prestamo</span>
                 </button>
             </div>
         </div>

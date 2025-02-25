@@ -13,6 +13,7 @@ import Home from './pages/Home.tsx'
 import Books from './pages/Books/Books.tsx';
 import Statistics from './pages/Statistics.tsx';
 import NotFound from './pages/NotFound.tsx';
+import BooksLoan from './pages/Books/BooksLoan.tsx';
 
 
 createRoot(document.getElementById('root')!).render(
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<Home />} />
         <Route path="/books" element={<Books />} />
         <Route path="/statistics" element={<Statistics />} />
+        <Route path="/loan" element={<BooksLoan />} />
         <Route path="/*" element={<NotFound />} />
       </Routes>
     </Router>

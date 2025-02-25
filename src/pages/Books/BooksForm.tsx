@@ -1,4 +1,16 @@
 import { useState, useEffect } from "react";
+import { z } from "zod";
+import RenderInputField from "@components/RenderInputField.tsx";
+
+const formSchema = z.object({
+    id: z.number(),
+    title: z.string().min(1, "El título es obligatorio."),
+    author: z.string()
+        .min(2, "El autor es obligatorio.")
+        .regex(/^[a-zA-Z\s]+$/, "El autor no puede contener números ni caracteres especiales."),
+    genre: z.string().min(1, "El género es obligatorio."),
+    availability: z.boolean(),
+});
 
 interface Book {
     id: number;
@@ -13,15 +25,9 @@ interface BooksFormProps {
 }
 
 const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
-
-    // Estado para almacenar los datos del formulario
-    const [formData, setFormData] = useState<Book>(
-        book || { id: Date.now(), title: "", author: "", genre: "", availability: true }
-    );
-
+    const [formData, setFormData] = useState<Book>(book || { id: 0, title: "", author: "", genre: "", availability: true });
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-    // Efecto para actualizar el formulario (revisar)
     useEffect(() => {
         if (book) {
             setFormData(book);
@@ -37,50 +43,37 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
     };
 
     const validateForm = () => {
-        let newErrors: { [key: string]: string } = {};
-        if (!formData.title.trim()) newErrors.title = "El título es obligatorio.";
-        if (!formData.author.trim()) newErrors.author = "El autor es obligatorio.";
-        else if (formData.author.length < 2 || /\d/.test(formData.author)) newErrors.author = "El autor no puede ser numérico.";
-        if (!formData.genre.trim()) newErrors.genre = "El género es obligatorio.";
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        const result = formSchema.safeParse(formData);
+        if (!result.success) {
+            const newErrors: { [key: string]: string } = {};
+            result.error.errors.forEach((err) => {
+                if (err.path) {
+                    newErrors[err.path[0]] = err.message;
+                }
+            });
+            setErrors(newErrors);
+            return false;
+        }
+        setErrors({});
+        return true;
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (validateForm()) {
             if (!book) {
-                setFormData({ id: Date.now(), title: "", author: "", genre: "", availability: true });
+                setFormData({ id: 0, title: "", author: "", genre: "", availability: true });
             }
         }
     };
 
-    // Función reutilizable para generar campos de entrada en el formulario
-    const renderInputField = (label: string, name: keyof Book, type: string = "text") => (
-        <div className="mb-3">
-            <label htmlFor={name} className="form-label fw-bold">{label}</label>
-            <input
-                type={type}
-                className="form-control"
-                id={name}
-                name={name}
-                placeholder={`Ingrese ${label.toLowerCase()}`}
-                value={formData[name] as string}
-                onChange={handleChange}
-            />
-            {errors[name] && <small className="text-danger">{errors[name]}</small>}
-        </div>
-    );
-
     return (
         <div className="p-1">
             <form onSubmit={handleSubmit}>
-                {renderInputField("Título", "title")}
-                {renderInputField("Autor", "author")}
-                {renderInputField("Género", "genre")}
+                <RenderInputField label="Título" name="title" value={formData.title} error={errors.title} onChange={handleChange} />
+                <RenderInputField label="Autor" name="author" value={formData.author} error={errors.author} onChange={handleChange} />
+                <RenderInputField label="Género" name="genre" value={formData.genre} error={errors.genre} onChange={handleChange} />
 
-                {/* Campo de selección para disponibilidad */}
                 <div className="mb-3">
                     <label htmlFor="availability" className="form-label fw-bold">Disponibilidad</label>
                     <select
@@ -95,7 +88,6 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
                     </select>
                 </div>
 
-                {/* Botón de envío del formulario */}
                 <div className="d-flex justify-content-end">
                     <button type="submit" className={`btn ${book ? "btn-success" : "btn-primary"} me-2`}>
                         {book ? "Guardar cambios" : "Agregar libro"}

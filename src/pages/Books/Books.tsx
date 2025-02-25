@@ -1,9 +1,9 @@
 import { SetStateAction, useState } from "react";
 import booksData from "../../data/books.js";
 import '@assets/styles/Books.css';
-import FloatWindow from "@components/FloatWindow.js";
-import BookDetails from "./BooksDetails.js";
-import BooksForm from "./BooksForm.js";
+import FloatWindow from "@components/FloatWindow.tsx";
+import BookDetails from "./BooksDetails.tsx";
+import BooksForm from "./BooksForm.tsx";
 
 interface Book {
     id: number;
@@ -18,23 +18,23 @@ interface ListBookProps extends Book {
 }
 
 const ListBook: React.FC<ListBookProps> = ({ id, title, author, genre, availability, setActiveBook }) => {
-
     const book = { id, title, author, genre, availability }
     return (
         <div className="col-md-6 col-lg-4 p-2 custom-container" onClick={() => setActiveBook(book)}>
             <div className="card shadow-sm rounded-3 position-relative custom-card">
                 <div className="card-body">
                     <h5 className="card-title text-center fw-bold">{title}</h5>
-                    <hr />
-                    <p className="card-text text-muted mb-1">
-                        <span className="fw-semibold">Autor:</span> {author}
-                    </p>
-                    <p className="card-text text-muted mb-1">
-                        <span className="fw-semibold">Género:</span> {genre}
-                    </p>
-                    <p className={`card-text ${availability ? "text-success" : "text-danger"}`}>
-                        <span className="fw-semibold">Disponibilidad:</span> {availability ? "Sí" : "No"}
-                    </p>
+                    <ul className="list-unstyled">
+                        <li className="my-2">
+                            <span className="fw-semibold">Autor:</span> {book.author}
+                        </li>
+                        <li className="my-2">
+                            <span className="fw-semibold">Género:</span> {book.genre}
+                        </li>
+                        <li className={`my-2 card-text ${book.availability ? "text-success" : "text-danger"}`}>
+                            <span className="fw-semibold">Disponibilidad:</span> {book.availability ? "Sí" : "No"}
+                        </li>
+                    </ul>
                 </div>
                 <div className="card-overlay">
                     <i className="bi bi-info-circle me-2"></i> Más información
