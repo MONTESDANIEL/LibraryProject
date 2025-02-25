@@ -10,7 +10,7 @@ import Navbar from './components/NavBar.tsx';
 import Footer from './components/Footer.tsx';
 
 import Home from './pages/Home.tsx'
-import Books from './pages/Books.tsx';
+import Books from './pages/Books/Books.tsx';
 import Statistics from './pages/Statistics.tsx';
 
 
