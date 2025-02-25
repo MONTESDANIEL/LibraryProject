@@ -1,18 +1,27 @@
 import { SetStateAction, useState } from "react";
-import books from "../../data/books.js";
+import booksData from "../../data/books.js";
 import '@assets/styles/Books.css';
 import FloatWindow from "@components/FloatWindow.js";
 import BookDetails from "./BooksDetails.js";
+import BooksForm from "./BooksForm.js";
 
-const ListBook: React.FC<Book> = ({ title = "", author = "", genre = "", availability = false }) => {
-    const [isOpen, setIsOpen] = useState(false);
+interface Book {
+    id: number;
+    title: string;
+    author: string;
+    genre: string;
+    availability: boolean;
+}
 
-    const handlerBook = () => {
-        setIsOpen(true);
-    };
+interface ListBookProps extends Book {
+    setActiveBook: (book: Book | null) => void;
+}
 
+const ListBook: React.FC<ListBookProps> = ({ id, title, author, genre, availability, setActiveBook }) => {
+
+    const book = { id, title, author, genre, availability }
     return (
-        <div className="col-md-6 col-lg-4 p-2 custom-container" onClick={() => handlerBook()}>
+        <div className="col-md-6 col-lg-4 p-2 custom-container" onClick={() => setActiveBook(book)}>
             <div className="card shadow-sm rounded-3 position-relative custom-card">
                 <div className="card-body">
                     <h5 className="card-title text-center fw-bold">{title}</h5>
@@ -31,35 +40,15 @@ const ListBook: React.FC<Book> = ({ title = "", author = "", genre = "", availab
                     <i className="bi bi-info-circle me-2"></i> Más información
                 </div>
             </div>
-            {isOpen && (
-                <FloatWindow
-                    isOpen={isOpen}
-                    onClose={() => setIsOpen(false)}
-                    title="Más información"
-                    size="md"
-                >
-                    <BookDetails
-                        title={title}
-                        author={author}
-                        genre={genre}
-                        availability={availability}
-                    />
-                </FloatWindow>
-            )}
         </div>
     );
 };
 
-interface Book {
-    id: number;
-    title: string;
-    author: string;
-    genre: string;
-    availability: boolean;
-}
-
 const Books = () => {
-
+    const [books] = useState<Book[]>(booksData);
+    const [activeBook, setActiveBook] = useState<Book | null>(null);
+    const [editingBook, setEditingBook] = useState<Book | null>(null);
+    const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState("all");
 
     const filters = [
@@ -80,21 +69,22 @@ const Books = () => {
     });
 
     const handleCreate = () => {
-        console.log("Create")
-    }
+        setIsFormOpen(true);
+    };
 
     return (
         <section className="container-fluid">
-
-            {/* Botones de acción */}
+            {/* Contenedor principal */}
             <div className="d-flex flex-column bg-body-tertiary m-3 p-3 rounded-4 min-vh-100">
-                <h1 className="text-center fw-bold p-3"> Libros</h1>
+                <h1 className="text-center fw-bold p-3">Libros</h1>
+
+                {/* Botones de acción */}
                 <div className="d-flex justify-content-between p-3 align-items-center">
-                    <button type="button" className="btn btn-success btn-sm" onClick={() => handleCreate()}>
+                    <button type="button" className="btn btn-success btn-sm" onClick={handleCreate}>
                         <i className="bi bi-plus me-2"></i>
                         <span>Nuevo</span>
                     </button>
-                    <div className="dropdown-center">
+                    <div className="dropdown">
                         <button
                             className="btn btn-sm btn-secondary dropdown-toggle"
                             type="button"
@@ -102,7 +92,7 @@ const Books = () => {
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <span>Filtrar</span>
+                            Filtrar
                         </button>
                         <ul className="dropdown-menu" aria-labelledby="filterDropdown">
                             {filters.map((filter) => (
@@ -123,7 +113,7 @@ const Books = () => {
                 <div className="row flex-grow-1">
                     {filteredBooks.length > 0 ? (
                         filteredBooks.map((row: Book) => (
-                            <ListBook key={row.id} {...row} />
+                            <ListBook key={row.id} {...row} setActiveBook={setActiveBook} />
                         ))
                     ) : (
                         <div className="d-flex justify-content-center align-items-center">
@@ -132,6 +122,27 @@ const Books = () => {
                     )}
                 </div>
             </div>
+
+            {/* Ventana flotante para detalles del libro */}
+            {activeBook && !editingBook && (
+                <FloatWindow
+                    isOpen={!!activeBook}
+                    onClose={() => setActiveBook(null)}
+                    title="Detalles del libro">
+                    <BookDetails book={activeBook || undefined} onEdit={() => setEditingBook(activeBook)} />
+                </FloatWindow>
+            )}
+
+            {/* Ventana flotante para crear o editar un libro */}
+            {(isFormOpen || editingBook) && (
+                <FloatWindow
+                    isOpen={isFormOpen || !!editingBook}
+                    onClose={() => { setIsFormOpen(false); setEditingBook(null); }}
+                    title={editingBook ? "Editar libro" : "Agregar nuevo libro"}>
+                    <BooksForm book={editingBook || undefined} />
+                </FloatWindow>
+            )}
+
         </section>
     );
 };
