@@ -16,10 +16,9 @@ Para comenzar a trabajar con este proyecto, primero clona este repositorio:
 
 ```bash
 git clone <url_del_repositorio>
-```
-
 cd <nombre_del_directorio>
 npm install
+```
 
 ## Ejecución del Proyecto
 
