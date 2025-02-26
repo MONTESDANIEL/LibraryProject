@@ -14,7 +14,7 @@ export const createLoan = async (loanData) => {
 
 export const listLoans = async () => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/listLoans`);
+        const response = await axios.get(`${API_BASE_URL}/listLoans`);
         return response.data.data;
     } catch (error) {
         throw error;
