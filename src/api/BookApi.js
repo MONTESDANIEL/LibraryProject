@@ -15,7 +15,7 @@ export const listAllBooks = async () => {
 export const addBook = async (bookData) => {
     try {
         const response = await axios.post(`${API_BASE_URL}/addBook`, bookData);
-        return response.data.message;
+        return response.data.data;
     } catch (error) {
         throw error;
     }
@@ -24,7 +24,7 @@ export const addBook = async (bookData) => {
 export const updateBook = async (bookData) => {
     try {
         const response = await axios.put(`${API_BASE_URL}/updateBook`, bookData);
-        return response.data.message;
+        return response.data.data;
     } catch (error) {
         throw error;
     }

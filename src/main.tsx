@@ -9,7 +9,6 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import Navbar from './components/NavBar.tsx';
 import Footer from './components/Footer.tsx';
 
-import Home from './pages/Home.tsx'
 import Books from './pages/Books/Books.tsx';
 import Statistics from './pages/Statistics.tsx';
 import NotFound from './pages/NotFound.tsx';
@@ -21,7 +20,6 @@ createRoot(document.getElementById('root')!).render(
     <Navbar />
     <Router>
       <Routes>
-        <Route path="/" element={<Home />} />
         <Route path="/books" element={<Books />} />
         <Route path="/statistics" element={<Statistics />} />
         <Route path="/loan" element={<BooksLoan />} />

@@ -5,7 +5,7 @@ const Navbar: React.FC = () => {
         <nav className="navbar navbar-expand-lg navbar-light bg-body-tertiary">
             <div className="container-fluid m-2">
 
-                <a className="navbar-brand fw-bold" href="/">
+                <a className="navbar-brand fw-bold" href="/books">
                     LIBRERÍA
                 </a>
 

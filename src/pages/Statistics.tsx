@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Pie, Line } from "react-chartjs-2";
 import { Chart, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, ChartOptions } from "chart.js";
-import loans from "../data/loans.js";
-import statisticsData from "../data/statsData.js";
+import { listLoans } from "@api/LoanApi.js";
+import { listAllBooks } from "@api/BookApi.js";
 
 Chart.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
 
@@ -10,54 +10,83 @@ interface StatisticsData {
     totalBooks: number;
     availableBooks: number;
     unavailableBooks: number;
-    mostBorrowedBook: string;
     uniqueUsers: number;
     currentMonthLoans: number;
     dailyLoans: number[];
 }
 
 interface Loan {
-    id: number;
-    book_id: number;
-    user_id: number;
-    loan_date: string;
-    return_date: string;
+    loanId: number;
+    userName: string;
+    userEmail: string;
+    userId: number;
+    userPhone: string;
+    userAddress: string;
+    bookId: number;
+    loanDate: string;
+    returnDate: string;
 }
 
 const Statistics = () => {
     const [stats, setStats] = useState<StatisticsData | null>(null);
 
     useEffect(() => {
-        const processLoanData = () => {
-            const { totalBooks, availableBooks, unavailableBooks, mostBorrowedBook } = statisticsData;
-            const uniqueUsers = new Set(loans.map((loan: Loan) => loan.user_id)).size;
+        const fetchData = async () => {
+            try {
+                const [books, loans] = await Promise.all([listAllBooks(), listLoans()]);
 
-            const currentMonth = new Date().getMonth() + 1;
-            const currentMonthLoans = loans.filter((loan: Loan) => new Date(loan.loan_date).getMonth() + 1 === currentMonth).length;
+                // Procesar libros
+                const totalBooks = books.length;
+                const unavailableBooks = loans.length; // Suponiendo que cada préstamo representa un libro no disponible
+                const availableBooks = totalBooks - unavailableBooks;
 
-            const dailyLoans = Array(30).fill(0);
-            loans.forEach((loan: Loan) => {
-                const loanDate = new Date(loan.loan_date);
-                if (loanDate.getMonth() + 1 === currentMonth) {
-                    dailyLoans[loanDate.getDate() - 1]++;
-                }
-            });
+                // Procesar préstamos
+                const loanStats = processLoanData(loans);
 
-            return {
-                totalBooks,
-                availableBooks,
-                unavailableBooks,
-                mostBorrowedBook,
-                uniqueUsers,
-                currentMonthLoans,
-                dailyLoans,
-            };
+                setStats({
+                    totalBooks,
+                    availableBooks,
+                    unavailableBooks,
+                    ...loanStats
+                });
+            } catch (error) {
+                console.error("Error al obtener datos:", error);
+            }
         };
 
-        setStats(processLoanData());
+        fetchData();
     }, []);
 
-    // Configuración para el Pie Chart
+
+    const processLoanData = (loans: Loan[]): Pick<StatisticsData, 'currentMonthLoans' | 'dailyLoans' | 'uniqueUsers'> => {
+        const currentMonth = new Date().getMonth() + 1;
+        const dailyLoans = Array(30).fill(0);
+        let currentMonthLoans = 0;
+        const uniqueUsers = new Set<string>();
+
+        loans.forEach(({ loanDate, userId }) => {
+            const [_, month, day] = loanDate.split("-").map(Number);
+            if (month === currentMonth) {
+                currentMonthLoans++;
+                uniqueUsers.add(String(userId)); // Agregamos el usuario al Set
+                if (day - 1 >= 0 && day - 1 < dailyLoans.length) {
+                    dailyLoans[day - 1]++;
+                }
+            }
+        });
+
+        return { currentMonthLoans, dailyLoans, uniqueUsers: uniqueUsers.size };
+    };
+
+    const pieData = stats ? {
+        labels: ["Disponibles", "No disponibles"],
+        datasets: [{
+            data: [stats.availableBooks, stats.unavailableBooks],
+            backgroundColor: ["#02910b", "#db0000"],
+            hoverBackgroundColor: ["#29ab31", "#ff4646"],
+        }],
+    } : null;
+
     const pieOptions: ChartOptions<"pie"> = {
         responsive: true,
         maintainAspectRatio: false,
@@ -89,20 +118,16 @@ const Statistics = () => {
         },
     };
 
-    const pieData = stats
-        ? {
-            labels: ["Disponibles", "No disponibles"],
-            datasets: [
-                {
-                    data: [stats.availableBooks, stats.unavailableBooks],
-                    backgroundColor: ["#4CAF50", "#F44336"],
-                    hoverBackgroundColor: ["#45A049", "#D32F2F"],
-                },
-            ],
-        }
-        : null;
+    const lineData = stats ? {
+        labels: Array.from({ length: 30 }, (_, i) => `Día ${i + 1}`),
+        datasets: [{
+            label: "Préstamos por día",
+            data: stats.dailyLoans,
+            borderColor: "#026491",
+            tension: 0.3,
+        }],
+    } : null;
 
-    // Configuración para el Line Chart
     const lineOptions: ChartOptions<"line"> = {
         responsive: true,
         maintainAspectRatio: false,
@@ -131,67 +156,28 @@ const Statistics = () => {
         },
     };
 
-    const lineData = stats
-        ? {
-            labels: Array.from({ length: 30 }, (_, i) => `Día ${i + 1}`),
-            datasets: [
-                {
-                    label: "Préstamos por día",
-                    data: stats.dailyLoans,
-                    fill: false,
-                    borderColor: "#007bff",
-                    tension: 0.3,
-                },
-            ],
-        }
-        : null;
-
     return (
         <div className="container-fluid">
             <div className="row bg-light p-3 m-3 rounded-4 min-vh-100">
                 <h1 className="text-center fw-bold p-3">Estadísticas</h1>
-
                 {stats ? (
                     <>
-                        {/* Resumen General */}
                         <div className="col-12 col-md-6 mb-4">
-                            <div className="card shadow p-3 h-100">
+                            <div className="card shadow p-2 h-100">
                                 <div className="card-body d-flex flex-column justify-content-center">
-                                    <h5 className="card-title text-center fw-bold">Resumen</h5>
-                                    <table className="table table-striped table-bordered table-hover mt-3">
+                                    <h5 className="text-center fw-bold">Resumen</h5>
+                                    <table className="table table-striped table-bordered table-hover mt-3 ">
                                         <tbody>
-                                            <tr>
-                                                <td className="align-middle text-center">Total de libros</td>
-                                                <td className="fw-bold align-middle text-center">{stats.totalBooks}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="align-middle text-center">Libros disponibles</td>
-                                                <td className="fw-bold align-middle text-center">{stats.availableBooks}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="align-middle text-center">Libros no disponibles</td>
-                                                <td className="fw-bold align-middle text-center">{stats.unavailableBooks}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="align-middle text-center">Libro más prestado</td>
-                                                <td className="fw-bold align-middle text-center">{stats.mostBorrowedBook}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="align-middle text-center">Usuarios únicos</td>
-                                                <td className="fw-bold align-middle text-center">{stats.uniqueUsers}</td>
-                                            </tr>
-                                            <tr>
-                                                <td className="align-middle text-center">Préstamos este mes</td>
-                                                <td className="fw-bold align-middle text-center">{stats.currentMonthLoans}</td>
-                                            </tr>
+                                            <tr><td>Total de libros</td><td className="text-center">{stats.totalBooks}</td></tr>
+                                            <tr><td>Libros disponibles</td><td className="text-center">{stats.availableBooks}</td></tr>
+                                            <tr><td>Libros no disponibles</td><td className="text-center">{stats.unavailableBooks}</td></tr>
+                                            <tr><td>Usuarios únicos</td><td className="text-center">{stats.uniqueUsers}</td></tr>
+                                            <tr><td>Préstamos este mes</td><td className="text-center">{stats.currentMonthLoans}</td></tr>
                                         </tbody>
                                     </table>
-
                                 </div>
                             </div>
                         </div>
-
-                        {/* Gráfico Pie - Disponibilidad */}
                         <div className="col-12 col-md-6 mb-4">
                             <div className="card shadow p-3 h-100">
                                 <div className="card-body text-center">
@@ -204,8 +190,6 @@ const Statistics = () => {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Gráfico Line - Préstamos por día */}
                         <div className="col-12 mb-4">
                             <div className="card shadow p-4 h-100">
                                 <h5 className="card-title fw-bold text-center my-2">Préstamos diarios del mes</h5>
@@ -217,16 +201,10 @@ const Statistics = () => {
                                     )}
                                 </div>
                             </div>
-
                         </div>
                     </>
                 ) : (
-                    <div className="text-center">
-                        <div className="spinner-border text-primary" role="status">
-                            <span className="visually-hidden">Cargando...</span>
-                        </div>
-                        <p className="mt-2">Cargando estadísticas...</p>
-                    </div>
+                    <h5 className="mb-0 text-center">No se encontraron datos para mostrar</h5>
                 )}
             </div>
         </div>

@@ -2,8 +2,9 @@ import { useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import RenderInputField from "@components/RenderInputField.tsx";
+import { createLoan } from "../../api/LoanApi.js"; // Importa la función de API
+import AlertFloating from "../../components/AlertFloting.js";
 
-// Tipado para el libro
 interface Book {
     id: number;
     title: string;
@@ -13,11 +14,6 @@ interface Book {
 }
 
 const formSchema = z.object({
-    id: z.number(),
-    book_id: z.number(),
-    user_id: z.string(),
-    loan_date: z.string().nonempty("La fecha de préstamo es obligatoria."),
-    return_date: z.string().nonempty("La fecha de devolución es obligatoria."),
     cc: z.string()
         .min(5, "La cédula debe tener entre 5 y 15 caracteres.")
         .max(15, "La cédula debe tener entre 5 y 15 caracteres.")
@@ -32,6 +28,8 @@ const formSchema = z.object({
         .min(5, "La dirección debe tener entre 5 y 100 caracteres.")
         .max(100, "La dirección debe tener entre 5 y 100 caracteres.")
         .regex(/^[a-zA-Z0-9\s]+([#\-,.]\s*[a-zA-Z0-9\s]*)*$/, "La dirección contiene caracteres inválidos."),
+    loan_date: z.string().nonempty("La fecha de préstamo es obligatoria."),
+    return_date: z.string().nonempty("La fecha de devolución es obligatoria."),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -41,23 +39,21 @@ const BooksLoan: React.FC = () => {
     const book: Book | null = location.state?.book ?? null;
 
     const [formData, setFormData] = useState<FormData>({
-        id: 0,
-        book_id: book?.id || 0,
-        user_id: "",
-        loan_date: new Date().toISOString().split("T")[0],
-        return_date: new Date().toISOString().split("T")[0],
         cc: "",
         name: "",
         email: "",
         phone: "",
         address: "",
+        loan_date: new Date().toISOString().split("T")[0],
+        return_date: new Date().toISOString().split("T")[0],
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (book) {
-            setFormData((prev) => ({ ...prev, book_id: book.id }));
+            setFormData((prev) => ({ ...prev }));
         }
     }, [book]);
 
@@ -66,9 +62,10 @@ const BooksLoan: React.FC = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const [alert, setAlert] = useState<{ message: string; type: "success" | "danger" } | null>(null);
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         const result = formSchema.safeParse(formData);
         if (!result.success) {
             const newErrors = result.error.flatten().fieldErrors;
@@ -76,12 +73,53 @@ const BooksLoan: React.FC = () => {
             return;
         }
 
-        const newData = { ...formData, user_id: formData.cc };
-        console.log("Datos de préstamo registrados:", newData);
+        if (!book) {
+            setErrors({ book: "Debe seleccionar un libro." });
+            return;
+        }
+
+        setErrors({});
+        setLoading(true);
+
+        try {
+            const loanData = {
+                userId: parseInt(formData.cc, 10),
+                userName: formData.name,
+                userEmail: formData.email,
+                userPhone: formData.phone,
+                userAddress: formData.address,
+                bookId: book.id,
+                loanDate: formData.loan_date,
+                returnDate: formData.return_date,
+            };
+
+            await createLoan(loanData);
+
+            setFormData({
+                cc: "",
+                name: "",
+                email: "",
+                phone: "",
+                address: "",
+                loan_date: new Date().toISOString().split("T")[0],
+                return_date: new Date().toISOString().split("T")[0],
+            });
+
+            // Mostrar alerta emergente
+            setAlert({ message: "¡Préstamo registrado con éxito!", type: "success" });
+
+        } catch (error) {
+            console.error("Error al registrar el préstamo:", error);
+            setAlert({ message: "Ocurrió un error al registrar el préstamo.", type: "danger" });
+        } finally {
+            setLoading(false);
+        }
     };
+
 
     return (
         <section className="container-fluid">
+            {alert && <AlertFloating message={alert.message} type={alert.type} />}
             <div className="row p-2 m-3">
                 <div className="p-4 mb-2 bg-body-tertiary rounded-4">
                     <h1 className="text-center fw-bold p-3">Rentar {book?.title}</h1>
@@ -127,7 +165,9 @@ const BooksLoan: React.FC = () => {
                         </div>
 
                         <div className="d-flex justify-content-end">
-                            <button type="submit" className="btn btn-primary me-2">Registrar préstamo</button>
+                            <button type="submit" className="btn btn-primary me-2" disabled={loading}>
+                                {loading ? "Registrando..." : "Registrar préstamo"}
+                            </button>
                         </div>
                     </form>
                 </div>

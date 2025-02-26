@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import RenderInputField from "@components/RenderInputField.tsx";
-import { addBook, updateBook } from "../../api/BookApi.js"; // Importa las funciones de la API
 
+// Esquema de validación con Zod
 const formSchema = z.object({
     id: z.number().optional(),
     title: z.string().min(1, "El título es obligatorio."),
     author: z.string()
         .min(2, "El autor es obligatorio.")
-        .regex(/^[a-zA-Z\s]+$/, "El autor no puede contener números ni caracteres especiales."),
-    genre: z.string().min(1, "El género es obligatorio."),
+        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s,\.]+$/, "El autor no tiene un formato correcto."),
+    genre: z.string()
+        .min(1, "El género es obligatorio.")
+        .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s,\.]+$/, "El género no tiene un formato correcto."),
     availability: z.boolean(),
 });
 
+
 interface Book {
-    id?: number;
+    id: number;
     title: string;
     author: string;
     genre: string;
@@ -23,11 +26,13 @@ interface Book {
 
 interface BooksFormProps {
     book?: Book;
+    handleSubmitBook: (formData: Book) => void;
 }
 
-const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
+const BooksForm: React.FC<BooksFormProps> = ({ book, handleSubmitBook }) => {
+    // Estado para manejar los datos del formulario
     const [formData, setFormData] = useState<Book>({
-        id: book?.id || undefined,
+        id: book?.id || 0,
         title: book?.title || "",
         author: book?.author || "",
         genre: book?.genre || "",
@@ -42,6 +47,7 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
         }
     }, [book]);
 
+    // Maneja cambios en los campos del formulario
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({
@@ -50,6 +56,7 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
         }));
     };
 
+    // Valida el formulario usando Zod
     const validateForm = () => {
         const result = formSchema.safeParse(formData);
         if (!result.success) {
@@ -66,21 +73,11 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
         return true;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
-
-        try {
-            if (formData.id) {
-                await updateBook(formData); // Editar libro existente
-            } else {
-                await addBook(formData); // Agregar nuevo libro
-            }
-            window.location.reload(); // Refresca la lista de libros
-        } catch (error) {
-            console.error("Ocurrió un error inesperado:", error);
-        }
-    };
+        handleSubmitBook(formData);
+    }
 
     return (
         <div className="p-1">
@@ -107,6 +104,7 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
                     onChange={handleChange}
                 />
 
+                {/* Campo de selección para disponibilidad */}
                 <div className="mb-3">
                     <label htmlFor="availability" className="form-label fw-bold">Disponibilidad</label>
                     <select
@@ -121,6 +119,7 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
                     </select>
                 </div>
 
+                {/* Botón de enviar con color según la acción */}
                 <div className="d-flex justify-content-end">
                     <button type="submit" className={`btn ${book ? "btn-success" : "btn-primary"} me-2`}>
                         {book ? "Guardar cambios" : "Agregar libro"}

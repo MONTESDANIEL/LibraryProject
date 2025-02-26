@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { deleteBook } from "../../api/BookApi.js";
 
 interface Book {
     id: number;
@@ -12,24 +11,18 @@ interface Book {
 interface BookDetailsProps {
     book: Book;
     onEdit: (book: Book) => void;
+    onDelete: () => void;  // Aquí corregimos para que no reciba el evento
 }
 
-const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit }) => {
+
+const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit, onDelete }) => {
     const navigate = useNavigate();
 
-    const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-
-        try {
-            const message = await deleteBook(book.id); // Llama a la función de API
-            console.log(message);
-            window.location.reload();
-        } catch (error) {
-            console.error("Ocurrió un error inesperado", error);
-        }
+    const handleDelete = () => {
+        onDelete();
     };
 
-
+    // Redirige a la página de préstamo con la información del libro
     const handleLoan = () => {
         navigate("/loan", { state: { book } });
     };
@@ -59,9 +52,14 @@ const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit }) => {
                     <i className="bi bi-pen-fill me-2"></i>
                     <span>Editar</span>
                 </button>
-                <button type="button" className={`btn btn-primary btn-sm col-3 ${book.availability ? "" : "disabled"}`} onClick={handleLoan}>
+                <button
+                    type="button"
+                    className={`btn btn-primary btn-sm col-3 ${book.availability ? "" : "disabled"}`}
+                    onClick={handleLoan}
+                    disabled={!book.availability}
+                >
                     <i className="bi bi-book me-2"></i>
-                    <span>Prestamo</span>
+                    <span>Préstamo</span>
                 </button>
             </div>
         </div>

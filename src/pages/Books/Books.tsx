@@ -3,7 +3,10 @@ import '@assets/styles/Books.css';
 import FloatWindow from "@components/FloatWindow.tsx";
 import BookDetails from "./BooksDetails.tsx";
 import BooksForm from "./BooksForm.tsx";
-import { listAllBooks } from "../../api/BookApi.js";
+import { deleteBook } from "@api/BookApi.js";
+import { listAllBooks } from "@api/BookApi.js";
+import { addBook, updateBook } from "@api/BookApi.js";
+import AlertFloating from "../../components/AlertFloting.tsx";
 
 interface Book {
     id: number;
@@ -46,6 +49,7 @@ const Books = () => {
     const [editingBook, setEditingBook] = useState<Book | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState("all");
+    const [alert, setAlert] = useState<{ message: string; type: "success" | "danger" | "warning" | "info"; key: number } | null>(null);
 
     useEffect(() => {
         const fetchBooks = async () => {
@@ -80,8 +84,59 @@ const Books = () => {
         setEditingBook(null);
     };
 
+    const handleDeleteBook = async () => {
+
+        if (!activeBook?.id) {
+            setAlert({ message: "No se puede eliminar el libro. Información incorrecta.", type: "danger", key: Date.now() });
+            return;
+        }
+
+        try {
+            await deleteBook(activeBook.id);
+            setBooks(prevBooks => prevBooks.filter(book => book.id !== activeBook.id));
+            setActiveBook(null);
+            setAlert({ message: "Libro eliminado con éxito", type: "success", key: Date.now() });
+        } catch (error) {
+            console.error("Ocurrió un error inesperado", error);
+            setAlert({ message: "Error al eliminar el libro", type: "danger", key: Date.now() });
+        }
+    };
+
+    const handleSubmitBook = async (formData: Book) => {
+        try {
+            if (formData.id) {
+                // Actualizar libro
+                const updatedBook = await updateBook(formData);
+
+                if (!updatedBook || !updatedBook.id) {
+                    throw new Error("La actualización no devolvió datos válidos." + updateBook);
+                }
+
+                setBooks(prevBooks =>
+                    prevBooks.map(book => (book.id === updatedBook.id ? { ...book, ...updatedBook } : book))
+                );
+                setEditingBook(null);
+                setActiveBook(null);
+            } else {
+                // Agregar nuevo libro
+                const newBook = await addBook(formData);
+                setBooks(prevBooks => [...prevBooks, newBook]);
+                setIsFormOpen(false);
+            }
+
+            console.log("Mostrando alerta de éxito...");
+            // Actualiza el estado con una nueva `key` para forzar re-render
+            setAlert({ message: `¡Libro ${formData.id ? "actualizado" : "agregado"} con éxito!`, type: "success", key: Date.now() });
+        } catch (error) {
+            console.error("Ocurrió un error inesperado:", error);
+            setAlert({ message: "Ocurrió un error al guardar el libro.", type: "danger", key: Date.now() });
+        }
+    };
+
+
     return (
         <section className="container-fluid">
+            {alert && <AlertFloating key={alert.key} message={alert.message} type={alert.type} />}
             <div className="d-flex flex-column bg-body-tertiary m-3 p-3 rounded-4 min-vh-100">
                 <h1 className="text-center fw-bold p-3">Libros</h1>
 
@@ -121,7 +176,7 @@ const Books = () => {
                         ))
                     ) : (
                         <div className="d-flex justify-content-center align-items-center">
-                            <h5 className="mb-0">No se encontró ningún libro para mostrar</h5>
+                            <h5 className="mb-0 text-center">No se encontró ningún libro para mostrar</h5>
                         </div>
                     )}
                 </div>
@@ -130,7 +185,7 @@ const Books = () => {
             {/* Ventana flotante para detalles del libro */}
             {activeBook && !editingBook && (
                 <FloatWindow isOpen onClose={() => setActiveBook(null)} title="Detalles del libro">
-                    <BookDetails book={activeBook} onEdit={() => setEditingBook(activeBook)} />
+                    <BookDetails book={activeBook} onEdit={() => setEditingBook(activeBook)} onDelete={handleDeleteBook} />
                 </FloatWindow>
             )}
 
@@ -138,7 +193,9 @@ const Books = () => {
             {(isFormOpen || editingBook) && (
                 <FloatWindow isOpen onClose={() => { setIsFormOpen(false); setEditingBook(null); }}
                     title={editingBook ? "Editar libro" : "Agregar nuevo libro"}>
-                    <BooksForm book={editingBook || undefined} />
+                    <BooksForm
+                        book={editingBook || { id: 0, title: '', author: '', genre: '', availability: true }}
+                        handleSubmitBook={handleSubmitBook} />
                 </FloatWindow>
             )}
         </section>
