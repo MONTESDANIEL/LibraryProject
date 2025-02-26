@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { deleteBook } from "../../api/BookApi.js";
 
 interface Book {
     id: number;
@@ -16,12 +17,20 @@ interface BookDetailsProps {
 const BookDetails: React.FC<BookDetailsProps> = ({ book, onEdit }) => {
     const navigate = useNavigate();
 
-    const handleDelete = () => {
-        console.log("Eliminar libro:", book.id);
+    const handleDelete = async (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+
+        try {
+            const message = await deleteBook(book.id); // Llama a la función de API
+            console.log(message);
+            window.location.reload();
+        } catch (error) {
+            console.error("Ocurrió un error inesperado", error);
+        }
     };
 
+
     const handleLoan = () => {
-        console.log("Datos del libro antes de navegar:", book);
         navigate("/loan", { state: { book } });
     };
 

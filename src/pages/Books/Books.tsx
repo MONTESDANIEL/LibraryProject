@@ -1,9 +1,9 @@
-import { SetStateAction, useState } from "react";
-import booksData from "../../data/books.js";
+import { SetStateAction, useState, useEffect } from "react";
 import '@assets/styles/Books.css';
 import FloatWindow from "@components/FloatWindow.tsx";
 import BookDetails from "./BooksDetails.tsx";
 import BooksForm from "./BooksForm.tsx";
+import { listAllBooks } from "../../api/BookApi.js";
 
 interface Book {
     id: number;
@@ -18,21 +18,17 @@ interface ListBookProps extends Book {
 }
 
 const ListBook: React.FC<ListBookProps> = ({ id, title, author, genre, availability, setActiveBook }) => {
-    const book = { id, title, author, genre, availability }
+    const book = { id, title, author, genre, availability };
     return (
         <div className="col-md-6 col-lg-4 p-2 custom-container" onClick={() => setActiveBook(book)}>
             <div className="card shadow-sm rounded-3 position-relative custom-card">
                 <div className="card-body">
                     <h5 className="card-title text-center fw-bold">{title}</h5>
                     <ul className="list-unstyled">
-                        <li className="my-2">
-                            <span className="fw-semibold">Autor:</span> {book.author}
-                        </li>
-                        <li className="my-2">
-                            <span className="fw-semibold">Género:</span> {book.genre}
-                        </li>
-                        <li className={`my-2 card-text ${book.availability ? "text-success" : "text-danger"}`}>
-                            <span className="fw-semibold">Disponibilidad:</span> {book.availability ? "Sí" : "No"}
+                        <li className="my-2"><span className="fw-semibold">Autor:</span> {author}</li>
+                        <li className="my-2"><span className="fw-semibold">Género:</span> {genre}</li>
+                        <li className={`my-2 card-text ${availability ? "text-success" : "text-danger"}`}>
+                            <span className="fw-semibold">Disponibilidad:</span> {availability ? "Sí" : "No"}
                         </li>
                     </ul>
                 </div>
@@ -45,11 +41,23 @@ const ListBook: React.FC<ListBookProps> = ({ id, title, author, genre, availabil
 };
 
 const Books = () => {
-    const [books] = useState<Book[]>(booksData);
+    const [books, setBooks] = useState<Book[]>([]);
     const [activeBook, setActiveBook] = useState<Book | null>(null);
     const [editingBook, setEditingBook] = useState<Book | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedFilter, setSelectedFilter] = useState("all");
+
+    useEffect(() => {
+        const fetchBooks = async () => {
+            try {
+                const response = await listAllBooks();
+                setBooks(response);
+            } catch (error) {
+                console.error("Error al obtener los libros:", error);
+            }
+        };
+        fetchBooks();
+    }, []);
 
     const filters = [
         { label: "Todos", value: "all" },
@@ -61,28 +69,25 @@ const Books = () => {
         setSelectedFilter(filterValue);
     };
 
-    // Filtrar libros según el estado seleccionado
-    const filteredBooks = books.filter((book: Book) => {
+    const filteredBooks = books.filter((book) => {
         if (selectedFilter === "available") return book.availability;
         if (selectedFilter === "unavailable") return !book.availability;
-        return true; // "Todos"
+        return true;
     });
 
     const handleCreate = () => {
         setIsFormOpen(true);
+        setEditingBook(null);
     };
 
     return (
         <section className="container-fluid">
-            {/* Contenedor principal */}
             <div className="d-flex flex-column bg-body-tertiary m-3 p-3 rounded-4 min-vh-100">
                 <h1 className="text-center fw-bold p-3">Libros</h1>
 
-                {/* Botones de acción */}
                 <div className="d-flex justify-content-between p-3 align-items-center">
                     <button type="button" className="btn btn-success btn-sm" onClick={handleCreate}>
-                        <i className="bi bi-plus me-2"></i>
-                        <span>Nuevo</span>
+                        <i className="bi bi-plus me-2"></i> <span>Nuevo</span>
                     </button>
                     <div className="dropdown">
                         <button
@@ -109,11 +114,10 @@ const Books = () => {
                     </div>
                 </div>
 
-                {/* Lista de libros */}
                 <div className="row flex-grow-1">
                     {filteredBooks.length > 0 ? (
-                        filteredBooks.map((row: Book) => (
-                            <ListBook key={row.id} {...row} setActiveBook={setActiveBook} />
+                        filteredBooks.map((book) => (
+                            <ListBook key={book.id} {...book} setActiveBook={setActiveBook} />
                         ))
                     ) : (
                         <div className="d-flex justify-content-center align-items-center">
@@ -125,24 +129,18 @@ const Books = () => {
 
             {/* Ventana flotante para detalles del libro */}
             {activeBook && !editingBook && (
-                <FloatWindow
-                    isOpen={!!activeBook}
-                    onClose={() => setActiveBook(null)}
-                    title="Detalles del libro">
-                    <BookDetails book={activeBook || undefined} onEdit={() => setEditingBook(activeBook)} />
+                <FloatWindow isOpen onClose={() => setActiveBook(null)} title="Detalles del libro">
+                    <BookDetails book={activeBook} onEdit={() => setEditingBook(activeBook)} />
                 </FloatWindow>
             )}
 
             {/* Ventana flotante para crear o editar un libro */}
             {(isFormOpen || editingBook) && (
-                <FloatWindow
-                    isOpen={isFormOpen || !!editingBook}
-                    onClose={() => { setIsFormOpen(false); setEditingBook(null); }}
+                <FloatWindow isOpen onClose={() => { setIsFormOpen(false); setEditingBook(null); }}
                     title={editingBook ? "Editar libro" : "Agregar nuevo libro"}>
                     <BooksForm book={editingBook || undefined} />
                 </FloatWindow>
             )}
-
         </section>
     );
 };

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import RenderInputField from "@components/RenderInputField.tsx";
+import { addBook, updateBook } from "../../api/BookApi.js"; // Importa las funciones de la API
 
 const formSchema = z.object({
-    id: z.number(),
+    id: z.number().optional(),
     title: z.string().min(1, "El título es obligatorio."),
     author: z.string()
         .min(2, "El autor es obligatorio.")
@@ -13,7 +14,7 @@ const formSchema = z.object({
 });
 
 interface Book {
-    id: number;
+    id?: number;
     title: string;
     author: string;
     genre: string;
@@ -25,7 +26,14 @@ interface BooksFormProps {
 }
 
 const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
-    const [formData, setFormData] = useState<Book>(book || { id: 0, title: "", author: "", genre: "", availability: true });
+    const [formData, setFormData] = useState<Book>({
+        id: book?.id || undefined,
+        title: book?.title || "",
+        author: book?.author || "",
+        genre: book?.genre || "",
+        availability: book?.availability ?? true,
+    });
+
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     useEffect(() => {
@@ -47,7 +55,7 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
         if (!result.success) {
             const newErrors: { [key: string]: string } = {};
             result.error.errors.forEach((err) => {
-                if (err.path) {
+                if (err.path.length > 0) {
                     newErrors[err.path[0]] = err.message;
                 }
             });
@@ -58,21 +66,46 @@ const BooksForm: React.FC<BooksFormProps> = ({ book }) => {
         return true;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (validateForm()) {
-            if (!book) {
-                setFormData({ id: 0, title: "", author: "", genre: "", availability: true });
+        if (!validateForm()) return;
+
+        try {
+            if (formData.id) {
+                await updateBook(formData); // Editar libro existente
+            } else {
+                await addBook(formData); // Agregar nuevo libro
             }
+            window.location.reload(); // Refresca la lista de libros
+        } catch (error) {
+            console.error("Ocurrió un error inesperado:", error);
         }
     };
 
     return (
         <div className="p-1">
             <form onSubmit={handleSubmit}>
-                <RenderInputField label="Título" name="title" value={formData.title} error={errors.title} onChange={handleChange} />
-                <RenderInputField label="Autor" name="author" value={formData.author} error={errors.author} onChange={handleChange} />
-                <RenderInputField label="Género" name="genre" value={formData.genre} error={errors.genre} onChange={handleChange} />
+                <RenderInputField
+                    label="Título"
+                    name="title"
+                    value={formData.title}
+                    error={errors.title}
+                    onChange={handleChange}
+                />
+                <RenderInputField
+                    label="Autor"
+                    name="author"
+                    value={formData.author}
+                    error={errors.author}
+                    onChange={handleChange}
+                />
+                <RenderInputField
+                    label="Género"
+                    name="genre"
+                    value={formData.genre}
+                    error={errors.genre}
+                    onChange={handleChange}
+                />
 
                 <div className="mb-3">
                     <label htmlFor="availability" className="form-label fw-bold">Disponibilidad</label>
